@@ -1,16 +1,11 @@
-# 海鸥期权报价 — Few-shot 样例集（分册）
+# 海鸥期权 Few-shot 样例
 
 ## 0. 文档定位
+本文件为合订本 **§12** 样例集。重点读每条**处理理由**;归一化见 `motivation_recognition.md`,求解与脚本见 `quotation_format.md`、`script_contract.md`。
 
-本分册对应合订本 **§12**。学习重点是每条样例后的**处理理由**；与 [`motivation_recognition.md`](motivation_recognition.md)、[`quotation_format.md`](quotation_format.md)、[`script_contract.md`](script_contract.md) 对照阅读。
+## 1. 样例
 
----
-
-## 12. Few-shot 样例集
-
-> **说明**:以下样例覆盖常见场景与边缘场景。学习重点不是样例本身,而是每条样例后附带的**处理理由**——它体现了从自然语言到内部约束的推理路径。
-
----
+> 学推理路径,不背模板。
 
 ### A. 基础干净表达
 
@@ -25,8 +20,6 @@
 python bank-derivative-quoting/scripts/seagull_option_query.py --user-id {userId} --currency-pair USDCNY --settle-purchase settle --term 3M
 ```
 
----
-
 #### 示例 A2:直接给执行价
 用户:
 > 做个 3M 结汇海鸥,执行价按 7.10 看看
@@ -38,8 +31,6 @@ python bank-derivative-quoting/scripts/seagull_option_query.py --user-id {userId
 python bank-derivative-quoting/scripts/seagull_option_query.py --user-id {userId} --settle-purchase settle --term 3M --desired-strikes 7.10
 ```
 
----
-
 #### 示例 A3:历史格式兼容
 用户:
 > 海鸥期权 USDCNY 3M 100pips 结汇 产品报价
@@ -50,8 +41,6 @@ python bank-derivative-quoting/scripts/seagull_option_query.py --user-id {userId
 ```bash
 python bank-derivative-quoting/scripts/seagull_option_query.py --user-id {userId} --currency-pair USDCNY --settle-purchase settle --term 3M --profit 100
 ```
-
----
 
 ### B. 市场观点表达(关键场景)
 
@@ -66,8 +55,6 @@ python bank-derivative-quoting/scripts/seagull_option_query.py --user-id {userId
 python bank-derivative-quoting/scripts/seagull_option_query.py --user-id {userId} --settle-purchase settle --term 3M --desired-strikes 7.20
 ```
 
----
-
 #### 示例 B2:区间肯定式观点
 用户:
 > 3M 结汇海鸥,我觉得未来三个月汇率大概率在 7.00 到 7.10
@@ -80,8 +67,6 @@ python bank-derivative-quoting/scripts/seagull_option_query.py --user-id {userId
 ```bash
 python bank-derivative-quoting/scripts/seagull_option_query.py --user-id {userId} --settle-purchase settle --term 3M --desired-strikes 7.10
 ```
-
----
 
 #### 示例 B3:区间观点 vs 单点区间(区别)
 用户 X:
@@ -105,8 +90,6 @@ Y 调用:
 python bank-derivative-quoting/scripts/seagull_option_query.py --user-id {userId} --settle-purchase settle --term 3M --desired-strikes 7.20
 ```
 
----
-
 ### C. 结果语言与反推
 
 #### 示例 C1:结果反推
@@ -119,8 +102,6 @@ python bank-derivative-quoting/scripts/seagull_option_query.py --user-id {userId
 ```bash
 python bank-derivative-quoting/scripts/seagull_option_query.py --user-id {userId} --settle-purchase settle --term 3M --prem-pips <反推值>
 ```
-
----
 
 #### 示例 C2:消歧
 用户:
@@ -136,8 +117,6 @@ python bank-derivative-quoting/scripts/seagull_option_query.py --user-id {userId
 <<<CONTENT_END>>>
 ```
 
----
-
 ### D. 双目标与区间
 
 #### 示例 D1:双目标探索
@@ -151,8 +130,6 @@ python bank-derivative-quoting/scripts/seagull_option_query.py --user-id {userId
 python bank-derivative-quoting/scripts/seagull_option_query.py --user-id {userId} --term 3M --desired-strikes 7.08 --prem-pips 100
 ```
 
----
-
 #### 示例 D2:区间扫描(单次,不要组合)
 用户:
 > 3M 的,补贴 50 到 150 点排几档
@@ -163,8 +140,6 @@ python bank-derivative-quoting/scripts/seagull_option_query.py --user-id {userId
 ```bash
 python bank-derivative-quoting/scripts/seagull_option_query.py --user-id {userId} --term 3M --prem-pips 50 150
 ```
-
----
 
 ### E. 风格化
 
@@ -179,8 +154,6 @@ python bank-derivative-quoting/scripts/seagull_option_query.py --user-id {userId
 python bank-derivative-quoting/scripts/seagull_option_query.py --user-id {userId} --settle-purchase settle --term 3M --delta -0.2 --inverse-type delta
 ```
 
----
-
 #### 示例 E2:风格对比(组合)
 用户:
 > 3M 结汇,激进和保守都看看
@@ -189,8 +162,6 @@ python bank-derivative-quoting/scripts/seagull_option_query.py --user-id {userId
 - 调用 1:`--delta -0.2`(激进)
 - 调用 2:`--delta +0.15`(保守)
 - 输出:两行一表
-
----
 
 ### F. 自由期限
 
@@ -205,8 +176,6 @@ python bank-derivative-quoting/scripts/seagull_option_query.py --user-id {userId
 python bank-derivative-quoting/scripts/seagull_option_query.py --user-id {userId} --settle-purchase settle --term 2M --desired-strikes 7.10
 ```
 
----
-
 ### G. 组合调用
 
 #### 示例 G1:期限横评
@@ -215,15 +184,11 @@ python bank-derivative-quoting/scripts/seagull_option_query.py --user-id {userId
 
 处理:单次调用无法完成多期限横评,走组合。三次调用,期限分别为 1M/3M/6M,其他参数相同,结果汇总为三行一表。
 
----
-
 #### 示例 G2:方向对比
 用户:
 > 3M USDCNY,结汇和购汇都看一下
 
 处理:两次调用,方向分别为 settle 和 purchase,两行一表。
-
----
 
 ### H. 不完整但可推断
 
@@ -238,8 +203,6 @@ python bank-derivative-quoting/scripts/seagull_option_query.py --user-id {userId
 
 若上下文不确定,仍应追问方向;在上下文明确时可以合理推断。
 
----
-
 #### 示例 H2:只给日期不给期限
 用户:
 > 2026-09-01 交割的结汇海鸥
@@ -250,8 +213,6 @@ python bank-derivative-quoting/scripts/seagull_option_query.py --user-id {userId
 ```bash
 python bank-derivative-quoting/scripts/seagull_option_query.py --user-id {userId} --settle-purchase settle --delivery-date 2026-09-01
 ```
-
----
 
 ### I. 混合表达
 
@@ -265,8 +226,6 @@ python bank-derivative-quoting/scripts/seagull_option_query.py --user-id {userId
 - 用 6.92 反推出 `prem_pips` 下限,与 7.10 一起进双目标探索
 - 输出 5 档,明确标注"保证结汇≥6.92"的可行区间
 
----
-
 ### J. 反直觉 / 相对量表达
 
 #### 示例 J1:相对比较
@@ -279,8 +238,6 @@ python bank-derivative-quoting/scripts/seagull_option_query.py --user-id {userId
 
 为避免误判,这种模糊表达建议先通过 `chat` 简单确认希望的补贴量级,再报价。
 
----
-
 #### 示例 J2:否定约束
 用户:
 > 3M 购汇,别让我高过 7.15 就行
@@ -289,8 +246,6 @@ python bank-derivative-quoting/scripts/seagull_option_query.py --user-id {userId
 - `direction = purchase`
 - "别高过 7.15" → `target_all_in_rate ≤ 7.15`(购汇方向的上限)
 - 反推 `prem_pips`,单次调用
-
----
 
 ### K. 口语化 / 非术语
 
@@ -303,8 +258,6 @@ python bank-derivative-quoting/scripts/seagull_option_query.py --user-id {userId
 - "看着体面点"是模糊的结果偏好,没有明确数值
 - 建议先以中等补贴基准报价,输出时说明"若希望更高补贴或更好执行价可进一步调整"
 - 或通过 `chat` 简短询问:希望补贴大致在什么量级
-
----
 
 ### L. 用词偏差
 
@@ -319,8 +272,6 @@ python bank-derivative-quoting/scripts/seagull_option_query.py --user-id {userId
 
 关键是**不要因为术语不规范就拒绝**,而要在语义上做最合理的翻译,并在输出中用规范术语复述一遍,便于用户确认。
 
----
-
 ### M. 自相矛盾 / 极端需求
 
 #### 示例 M1:无法同时满足
@@ -333,8 +284,6 @@ python bank-derivative-quoting/scripts/seagull_option_query.py --user-id {userId
 3. 给出两种可选降级:保留 6.5 执行价、或保留 500 补贴
 4. 让用户选择继续
 
----
-
 ### N. 带市场观点(不评论)
 
 #### 示例 N1:含预判
@@ -346,8 +295,6 @@ python bank-derivative-quoting/scripts/seagull_option_query.py --user-id {userId
 - 方向=购汇、期限=3M,走基准报价
 - 输出时可附一句:"您看是否需要进一步设定执行价或补贴目标"
 
----
-
 ### O. 多轮上下文
 
 #### 示例 O1:指代上一轮
@@ -355,8 +302,6 @@ python bank-derivative-quoting/scripts/seagull_option_query.py --user-id {userId
 > 刚才那个给我换成购汇看看
 
 处理:继承上一轮的 `term=3M` 以及其他默认参数,仅替换 `direction` 为 `purchase`。单次调用。
-
----
 
 ### P. 边界值
 
