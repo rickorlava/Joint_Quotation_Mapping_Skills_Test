@@ -30,6 +30,17 @@
 python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {userId} --currency-pair {currency_pair} --settle-purchase {settle} --term {term}
 ```
 
+#### 1.1.1 给 delivery 求 K
+delivery 也作为给定了期限的一种情况，只是入参方式不同
+- 传入：delivery, settle, currency_pair
+- 处理：delivery 作为 `--delivery-date`, settle 作为 `--settle-purchase` 的接口传参，求对应的 K。
+- 输出：单次调用脚本，返回对应 K 及掉期细节。
+
+调用：
+```bash
+python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {userId} --currency-pair {currency_pair} --settle-purchase {settle} --delivery-date {delivery}
+```
+
 ### 1.2 基准单点报价给 K 求 term
 - 传入：K, settle, currency_pair
 - 处理：K 作为 `--desired-strike`, settle 作为 `--settle-purchase`, currency_pair 作为 `--currency-pair` 的接口传参，求对应的 term。
@@ -45,7 +56,7 @@ python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {u
 - 传入：terms 区间, settle, currency_pair
 - 处理：
     - 在区间内选择若干个代表性 term 点位(建议 3~5 个,均匀分布)
-    - foreach term 按照 `1.2 基准单点报价给 term 求 K` 传参调一次脚本
+    - foreach term 按照 `1.1 基准单点报价给 term 求 K` 传参调一次脚本
     - 汇总为表格，每行标注对应的子调用维度(K / term / 方向 / 币种 / 补贴点数)
     - 调用次数需控制在 6 次以内
 
@@ -54,7 +65,7 @@ python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {u
 - 传入：K 的区间, settle, currency_pair
 - 处理：
     - 在区间内选择若干代表性 K 点位(建议 3~5 个)
-    - foreach K 按照 `1.1 基准单点报价给 K 求 term` 传参调一次脚本
+    - foreach K 按照 `1.2 基准单点报价给 K 求 term` 传参调一次脚本
     - 汇总为表格，每行标注对应的子调用维度(K / term / 方向 / 币种 / 补贴点数)
     - 调用次数需控制在 6 次以内
 
@@ -62,7 +73,7 @@ python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {u
 此为组合方式，给出用户期望的近端补贴点数, agent 扫描 term,筛选出补贴最接近目标的两个 term 点位返回。
 - 传入：target_prem_pips, settle, currency_pair
 - 处理：
-    1. **扫描阶段**:在 1M~12M 期限范围内,选取一组代表性 term(如 1M、2M、3M、4M、6M、9M、12M 等,总数不超过 6 次预算), foreach term 按照 `1.2 基准单点报价给 term 求 K` 传参调一次脚本,取回对应的补贴点数，得到一组 (term, 补贴) 数据点
+    1. **扫描阶段**:在 1M~12M 期限范围内,选取一组代表性 term(如 1M、2M、3M、4M、6M、9M、12M 等,总数不超过 6 次预算), foreach term 按照 `1.1 基准单点报价给 term 求 K` 传参调一次脚本,取回对应的补贴点数，得到一组 (term, 补贴) 数据点
     2. **筛选阶段**:对扫描得到的 (term, 补贴) 数据点,找出补贴数值**最接近用户目标的两个 term 点位**(一个略高、一个略低,方便用户对比)
     3. **输出阶段**:只把筛选出的两个方案返回给用户,表格列明 term、K、补贴点数,并标注"这是最接近您目标 {target_prem_pips} 点的两个方案"
 
@@ -92,5 +103,5 @@ python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {u
 - 传入：无
 - 处理：
     - 将 currency_pair 设定为 USDCNY
-    - foreach settle in {purchase, settle}, for each term in {3M, 6M, 9M}，将 (term, settle, currency_pair)按照 `1.2 基准单点报价给 term 求 K` 传参调一次脚本
+    - foreach settle in {purchase, settle}, for each term in {3M, 6M, 9M}，将 (term, settle, currency_pair)按照 `1.1 基准单点报价给 term 求 K` 传参调一次脚本
     - 将调用结果汇总为表格，每行标注对应的子调用维度
