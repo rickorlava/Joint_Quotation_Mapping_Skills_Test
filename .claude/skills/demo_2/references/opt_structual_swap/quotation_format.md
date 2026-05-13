@@ -7,7 +7,7 @@
 - motivation_recognition 识别完成后需要输出什么参数（脚本入参契约）
 - 入参后如何将脚本返回的结果整理并输出
 
-硬约束要求：
+### 硬约束要求
 - 所有 agent 的动机识别最终**必须**落在所枚举的合法报价范式的其中一种。
 - 所有的报价结果**必须**通过调用接口得到，接口的调用IO格式见 `spec.md` 的 `3. 报价接口 IO 格式`
 - 先规划后执行，组合方式需要先确定所有需要调用的单点报价传参，然后逐一调用脚本获取结果
@@ -105,3 +105,43 @@ python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {u
     - 将 currency_pair 设定为 USDCNY
     - foreach settle in {purchase, settle}, for each term in {3M, 6M, 9M}，将 (term, settle, currency_pair)按照 `1.1 基准单点报价给 term 求 K` 传参调一次脚本
     - 将调用结果汇总为表格，每行标注对应的子调用维度
+
+## 2. 汇总输出格式
+
+### 2.1 类型标签
+- 正常报价:`<<<TYPE_START>>> price <<<TYPE_END>>>`
+- 错误:`<<<TYPE_START>>> error <<<TYPE_END>>>`
+- 需用户补充:`<<<TYPE_START>>> chat <<<TYPE_END>>>`
+
+### 2.2 单次调用
+脚本输出直接透传,不二次组装。
+
+### 2.3 组合调用
+汇总为单张表格在 `price` 块中返回。补贴反查场景只输出筛选后的方案,不输出扫描中间数据。
+
+### 2.4 错误输出
+
+```
+<<<TYPE_START>>> error <<<TYPE_END>>>
+<<<CONTENT_START>>>
+**查询失败**:{错误信息}
+<<<CONTENT_END>>>
+```
+
+### 2.5 未开市(固定文案)
+
+```
+<<<TYPE_START>>> chat <<<TYPE_END>>>
+<<<CONTENT_START>>>
+当前未开市,工作日开市时间为:9:30-03:00,请您在工作时间内再来询价
+<<<CONTENT_END>>>
+```
+
+### 2.6 节假日(固定文案)
+
+```
+<<<TYPE_START>>> chat <<<TYPE_END>>>
+<<<CONTENT_START>>>
+当前日期为节假日,不支持报价,请输入非节假日进行询价
+<<<CONTENT_END>>>
+```
