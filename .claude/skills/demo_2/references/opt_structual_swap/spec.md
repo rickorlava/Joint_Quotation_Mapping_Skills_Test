@@ -127,5 +127,5 @@ python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {u
 11. **日期优先级**:`term` > `delivery_date`
 12. **默认值**:币种 `USDCNY`;方向 `settle`
 13. **`user_id` 来源**:memory
-14. **固定文案**:未开市 / 节假日使用 §9 原文
+14. **固定文案**:未开市 / 节假日使用报价范式所规定输出格式对应的 `2.5/2.6` 固定文案
 15. **历史六字段格式**仅作兼容识别,不作为推荐形态
