@@ -4,21 +4,26 @@
 本文件定义结构性掉期报价 agent 的 **合法的报价方式**。
 
 每一种报价范式规定了此情形下：
-- 如何调用接口
-- 如何将接口所得到的报价结果汇总。
-- 汇总报价结果的输出格式
+- motivation_recognition 识别完成后需要输出什么参数（脚本入参契约）
+- 入参后如何将脚本返回的结果整理并输出
 
 硬约束要求：
 - 所有 agent 的动机识别最终**必须**落在所枚举的合法报价范式的其中一种。
 - 所有的报价结果**必须**通过调用接口得到，接口的调用IO格式见 `spec.md` 的 `3. 报价接口 IO 格式`
 - 先规划后执行，组合方式需要先确定所有需要调用的单点报价传参，然后逐一调用脚本获取结果
 - 组合方式调用的单点报价总次数不得超过6
+
+### 通用输出规则
+- 汇总为表格时，每行标注对应的子调用维度（K / term / 方向 / 币种 / 补贴点数）
+- 组合模式只输出最终结果，不输出扫描过程中的全部中间数据——**中间数据是 agent 的内部工作，不是用户的答案**
+
 ## 1. 合法的报价范式
 - `userId` 作为脚本调用的传参，需要从 memory 中读取
 
 ### 1.1 基准单点报价给 term 求 K
 - 传入：term, settle, currency_pair
 - 处理：term 作为 `--term`, settle 作为 `--settle-purchase` 的接口传参，求对应的 K。
+- 输出：单次调用脚本，返回对应 K 及掉期细节。
 
 调用：
 ```bash
@@ -28,6 +33,7 @@ python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {u
 ### 1.2 基准单点报价给 K 求 term
 - 传入：K, settle, currency_pair
 - 处理：K 作为 `--desired-strike`, settle 作为 `--settle-purchase`, currency_pair 作为 `--currency-pair` 的接口传参，求对应的 term。
+- 输出：单次调用脚本，返回对应 term 及掉期细节。
 
 调用:
 ```bash
@@ -40,7 +46,7 @@ python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {u
 - 处理：
     - 在区间内选择若干个代表性 term 点位(建议 3~5 个,均匀分布)
     - foreach term 按照 `1.2 基准单点报价给 term 求 K` 传参调一次脚本
-    - 汇总为表格,列头含 term 与对应 K
+    - 汇总为表格，每行标注对应的子调用维度(K / term / 方向 / 币种 / 补贴点数)
     - 调用次数需控制在 6 次以内
 
 ### 1.4 沿曲线扫描 K 区间
@@ -49,7 +55,7 @@ python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {u
 - 处理：
     - 在区间内选择若干代表性 K 点位(建议 3~5 个)
     - foreach K 按照 `1.1 基准单点报价给 K 求 term` 传参调一次脚本
-    - 汇总为表格,列头含 K 与对应 term
+    - 汇总为表格，每行标注对应的子调用维度(K / term / 方向 / 币种 / 补贴点数)
     - 调用次数需控制在 6 次以内
 
 ### 1.5 按近端补贴点数反查
@@ -59,6 +65,8 @@ python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {u
     1. **扫描阶段**:在 1M~12M 期限范围内,选取一组代表性 term(如 1M、2M、3M、4M、6M、9M、12M 等,总数不超过 6 次预算), foreach term 按照 `1.2 基准单点报价给 term 求 K` 传参调一次脚本,取回对应的补贴点数，得到一组 (term, 补贴) 数据点
     2. **筛选阶段**:对扫描得到的 (term, 补贴) 数据点,找出补贴数值**最接近用户目标的两个 term 点位**(一个略高、一个略低,方便用户对比)
     3. **输出阶段**:只把筛选出的两个方案返回给用户,表格列明 term、K、补贴点数,并标注"这是最接近您目标 {target_prem_pips} 点的两个方案"
+
+1.5 的扫描阶段，agent 可根据用户语言微调扫描范围——如果用户说"半年以内"，则聚焦在 1M~6M。
 
 #### 1.5.1 corner case
 若扫描后发现目标补贴点数**明显高于或低于**曲线所有点的取值:
@@ -85,4 +93,4 @@ python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {u
 - 处理：
     - 将 currency_pair 设定为 USDCNY
     - foreach settle in {purchase, settle}, for each term in {3M, 6M, 9M}，将 (term, settle, currency_pair)按照 `1.2 基准单点报价给 term 求 K` 传参调一次脚本
-    - 将调用结果用表格汇总
+    - 将调用结果汇总为表格，每行标注对应的子调用维度
