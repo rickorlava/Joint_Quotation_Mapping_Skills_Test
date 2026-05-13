@@ -1,23 +1,20 @@
 ## 标准衍生产品
 
-- 随心展 {{gateway}}/sxz
+- 1 随心展 {{gateway}}/sxz
 
-- 期汇通 {{gateway}}/qht
+- 2 期汇通 {{gateway}}/qht （待期权反解）
 
-- 结构性掉期 {{gateway}}/structuredSwap
+- 3 结构性掉期 {{gateway}}/structuredSwap
 
-- 双货币存款 {{gateway}}/dcd
+- 4 双货币存款 {{gateway}}/dcd 
 
-- 海鸥期权 {{gateway}}/qht
+- 5 海鸥期权 {{gateway}}/qht
 
-- 企银结构性掉期 {{gateway}}/OptStructuredSwap
+- 6 企银结构性掉期 {{gateway}}/OptStructuredSwap （无期权反解）
 
-- 倍享远期 {{gateway}}/Bxyq
+- 7 倍享远期 {{gateway}}/Bxyq 
 
-- 外汇掉期 {{gateway}}/swapProduct
+- 8 外汇掉期 {{gateway}}/swapProduct
 
-- 双货币远期 {{gateway}}/Dcf
+- 9 双货币远期 {{gateway}}/Dcf （待期权反解）
 
-- 偏离掉期 {{gateway}}/deviation-swap
-
-- 平价倍享 {{gateway}}/par-leverage-forward
