@@ -11,6 +11,7 @@
 5. [`script_contract.md`](script_contract.md) — Delta 与 CLI
 6. [`output_format.md`](output_format.md) — 追问与输出块
 7. [`examples.md`](examples.md) — Few-shot
+8. [`minicase.md`](minicase.md) — 2–3 个短自测用例（路由与调用次数）
 
 ## 合订本对照
 
