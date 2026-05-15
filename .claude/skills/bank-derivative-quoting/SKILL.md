@@ -21,7 +21,7 @@ description:
 ### 1.1 支持产品
 
 - 结构性掉期（`opt_structual_swap_prod/`）
-- 双货币存款（`DCD_prod/`）
+- 双货币存款（`dual_currency_deposit_prod/`）
 - 海鸥期权（`seagull_option_prod/`）
 
 ### 1.2 使用场景
@@ -325,7 +325,7 @@ agent 在执行组合调用时,应在内部保留以下信息以便日志与排�
 - 联想权限：不可联想
 - 路径：`{product}/agent_output/standard_fields.md`
 
-**支持产品：** `opt_structual_swap_prod/`（结构性掉期）、`DCD_prod/`（双货币存款）、`seagull_option_prod/`（海鸥期权）
+**支持产品：** `opt_structual_swap_prod/`（结构性掉期）、`dual_currency_deposit_prod/`（双货币存款）、`seagull_option_prod/`（海鸥期权）
 
 
 ---

@@ -58,6 +58,13 @@ python bank-derivative-quoting/scripts/dcd_query.py --user_id {userId} --term 3M
 python bank-derivative-quoting/scripts/dcd_query.py --user_id {userId} --currency_pair USDCNY --settle_purchase settle --term 3M --initial_profit 100
 ```
 
+#### 示例A5:兜底报价
+用户：
+> 双货币报价、dcd 报价、双货币 产品报价、双币存款 报价
+调用：
+bank-derivative-quoting/reference/common/dual_currency_deposit_mapping_spec.md dcd_defautl_quote 接口
+
+
 ---
 
 ### B. 市场观点表达(关键场景)

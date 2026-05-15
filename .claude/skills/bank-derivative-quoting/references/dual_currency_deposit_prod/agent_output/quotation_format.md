@@ -2,7 +2,7 @@
 
 ## 0. 文档定位
 本文件定义双货币存款(DCD)报价 agent 的合法报价范式(单次求解模式与组合型求解)。
-由 `intent_recognition/DCD_motivation_recognition.md` §5(报价范式映射)指定映射至此执行。
+由 `intent_recognition/motivation_recognition.md` §5(报价范式映射)指定映射至此执行。
 
 ---
 
@@ -12,6 +12,7 @@ agent 根据归一化后的约束选择求解模式,对应调用一次脚本。
 
 | 用户给出的约束 | 求解模式 | 脚本参数 |
 |---|---|---|
+| 无 | 默认产品报价（兜底报价）| -- |
 | 只有 term / delivery_date | 基准报价 | 无 strike/yield/delta |
 | term + desired_strike(单值) | K 确定求 yield | `--desired_strikes` 1 个值 |
 | term + desired_yield(单值) | yield 确定反求 K | `--desired_yields` 1 个值 |
@@ -20,6 +21,8 @@ agent 根据归一化后的约束选择求解模式,对应调用一次脚本。
 | term + desired_yields(2 个值) | yield 区间扫描 | `--desired_yields` 2 个值 |
 | **term + desired_yield(结果收益率) + desired_strike(市场观点K)** | **反解得K₁ → 与K₂构成K区间 → K区间扫描**(详见 motivation_recognition.md §4.2.8) | `--desired-strikes K₁ K₂` |
 | term + delta_preference | 风格化报价 | `--delta` |
+
+> 提示🔔 ：当用户无任何约束及相关表述，仅询问产品报价时，给出默认兜底报价。
 
 **重要**:区间扫描与双目标探索场景下,**脚本自身会返回多个梯度方案**,agent 不需要自行遍历。
 
@@ -38,7 +41,8 @@ agent 根据归一化后的约束选择求解模式,对应调用一次脚本。
 在这里 3M 是明确期限,K=7.20 和 yield=3.5% 是两个目标值,调用:
 
 ```bash
-python bank-derivative-quoting/scripts/dcd_query.py --user_id {userId} --term 3M --currency_pair USDCNY --settle_purchase settle --desired_strikes 7.20 --desired_yields 3.5
+调用 bank-derivative-quoting/references/common/interface/dual_currency_desposit_mapping_spec.md dcd_term_with_strike_yield_and_currency 
+--user_id {userId} --term 3M --currency_pair USDCNY --settle_purchase settle --desired_strikes 7.20 --desired_yields 3.5
 ```
 
 #### 常见误解提醒

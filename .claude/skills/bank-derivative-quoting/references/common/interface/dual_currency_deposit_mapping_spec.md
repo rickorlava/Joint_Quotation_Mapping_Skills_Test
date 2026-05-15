@@ -29,6 +29,7 @@
 
 | 类型 | 场景说明 |
 |------|----------|
+| dcd_defautl_quote| 默认产品报价（兜底报价）|
 | dcd_term_only | 只有日期/期限，没有货币对 |
 | dcd_term_with_currency | 指定了期限，指定了货币对 |
 | dcd_term_with_strike | 只有期望执行价，没有货币对 |

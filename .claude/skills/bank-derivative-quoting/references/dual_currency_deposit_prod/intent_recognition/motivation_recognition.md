@@ -177,6 +177,10 @@ agent 不要把双目标探索理解为"在期限维度上找不同期限"。双
 
 **判据**:如果 agent 能通过 DCD 解空间结构(K-yield 一一对应)将收益率目标反解为某个 K,且该 K 与市场观点K形成区间关系,则一定走 K 区间扫描,不走双目标探索。
 
+### 4.3 归一化失败。兜底措施
+- 若无法识别用户需求或者内部约束转化失败，给出默认兜底报价。
+- 并通过`chat` 继续追问。
+
 ---
 
 ## 5. 报价范式映射
@@ -211,11 +215,12 @@ agent 不要把双目标探索理解为"在期限维度上找不同期限"。双
 
 ## 8. 脚本调用契约
 
-脚本路径:
+双货币接口声明:
 
 ```
-bank-derivative-quoting/scripts/dcd_query.py
+bank-derivative-quoting/references/common/interface/dual_currency_deposit_mapping_spec.md
 ```
+**按照接口声明，调用对应接口**
 
 ### 8.1 完整参数清单
 
@@ -233,6 +238,10 @@ bank-derivative-quoting/scripts/dcd_query.py
 | `--initial_profit` | 中收点数 |
 
 ### 8.2 典型调用示例
+```bash
+#默认报价
+调用 双货币报价接口 默认产品报价（兜底报价）
+```
 
 ```bash
 # 基准报价(只给期限)
