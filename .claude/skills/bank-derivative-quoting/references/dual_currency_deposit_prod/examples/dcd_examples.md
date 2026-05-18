@@ -86,10 +86,9 @@ python bank-derivative-quoting/scripts/dcd_query.py --user_id {userId} --term 3M
 
 #### 示例 B2:区间肯定式观点
 用户:
-> 3M 结汇 DCD,我觉得未来三个月汇率大概率在 7.00 到 7.10 之间
+> 3M 结汇 DCD,我觉得未来三个月汇率大概率在 7.10
 
 处理:
-- "大概率在 7.00-7.10 之间" 是区间观点
 - 结汇方向下 K 取区间上沿 7.10
 - term=3M(与"未来三个月"一致),K=7.10 → K 确定求 yield
 - 输出时在报价上方简要说明"基于您对区间的看法,选取 K=7.10 作为行权价"
@@ -187,6 +186,24 @@ python bank-derivative-quoting/scripts/dcd_query.py --user_id {userId} --term 3M
 调用:
 ```bash
 python bank-derivative-quoting/scripts/dcd_query.py --user_id {userId} --term 3M --desired_yields 2 5 --default-currency --settle_purchase settle
+```
+
+#### 示例 D3:K 区间
+用户：
+> 未来三个月 DCD 结汇 7.0 7.10
+处理：K区间 `7.0 7.10` -> 脚本内置 5 梯度,单次调用。
+调用:
+```bash
+python bank-derivative-quoting/scripts/dcd_query.py --user_id {userId} --term 3M --desired_strikes 7.0 7.1 --default-currency --settle_purchase settle
+```
+
+#### 示例D4: 震荡区间 
+用户：
+> 3M 结汇 DCD 6.4到7.3震荡 
+处理：K区间 -> 脚本内置 5 梯度,单次调用。 `6.4 - 7.3` 区间
+调用:
+```bash
+python bank-derivative-quoting/scripts/dcd_query.py --user_id {userId} --term 3M --desired_strikes 6.4 7.3 --default-currency --settle_purchase settle
 ```
 
 ---
