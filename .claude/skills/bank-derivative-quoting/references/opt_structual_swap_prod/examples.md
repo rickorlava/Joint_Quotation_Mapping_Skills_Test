@@ -479,13 +479,14 @@ python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {u
 
 处理：
 - term=3M 明确，direction=settle，风格="保守"
-- 将"保守"映射为 delta=0.10（低行权概率，K 远离当前价）
-- 走报价范式 **1.8 风格化报价**：传入 term=3M, delta=0.10
-- 脚本按 delta 反解 K，直接透传
+- 风格→delta 映射：保守→15d，中性→30d，激进→50d（ATM）
+- 边界校验：delta=0.15 ≥ 最低边界 0.15（±35d）→ 校验通过
+  - 若用户表达更极端（如"极度保守"映射为 10d）→ 超边界 → clamp 至 15d + `chat` 提示"已触达保守边界，无法更远"
+- 走报价范式 **1.8 风格化报价**：传入 term=3M, delta=0.15
 
 调用：
 ```bash
-python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {userId} --currency-pair USDCNY --settle-purchase settle --term 3M --delta 0.10
+python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {userId} --currency-pair USDCNY --settle-purchase settle --term 3M --delta 0.15
 ```
 
 #### 示例 R2：激进风格
@@ -494,12 +495,13 @@ python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {u
 
 处理：
 - term=6M 明确，direction=purchase，风格="激进"
-- 将"激进"映射为 delta=0.35（较高行权概率，K 较近）
-- 走报价范式 **1.8 风格化报价**：传入 term=6M, delta=0.35
+- 风格→delta 映射：保守→15d，中性→30d，激进→50d（ATM）
+- 边界校验：delta=0.50 在有效范围 [0.15, 0.50] 内 → 校验通过
+- 走报价范式 **1.8 风格化报价**：传入 term=6M, delta=0.50
 
 调用：
 ```bash
-python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {userId} --currency-pair USDCNY --settle-purchase purchase --term 6M --delta 0.35
+python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {userId} --currency-pair USDCNY --settle-purchase purchase --term 6M --delta 0.50
 ```
 
 ---
