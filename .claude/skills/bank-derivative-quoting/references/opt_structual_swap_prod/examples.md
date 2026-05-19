@@ -17,11 +17,20 @@
 
 处理:只给了 term 和方向,走报价范式 **1.1 基准单点报价给 term 求 K** 并输出。
 
-#### 示例A2:给 K 求 term
+#### 示例A2:给 K（无 term）
 用户:
 > 结构性掉期,结汇,K 定在 7.05
 
-处理:只给了 K 和方向,走报价范式 **1.2 基准单点报价给 K 求 term** 并输出。
+处理:只给了 K 和方向。结构性掉期需要 term 锚定掉期结构，K 不再唯一决定 term。须追问 term 后走 **1.3 K 确定求 prem**。
+
+追问输出:
+```
+<<<TYPE_START>>> chat <<<TYPE_END>>>
+<<<CONTENT_START>>>
+K=7.05 已收到。请问您希望以哪个期限来搭配这个 K？
+(如: 1M、3M、6M、1Y 等)
+<<<CONTENT_END>>>
+```
 
 #### 示例A3：历史格式
 用户:
@@ -39,7 +48,7 @@
 用户:
 > 给我6m交割的结汇结构性掉期，美元和欧元都看下
 
-处理:用户要求美元和欧元都看，默认本币计价下，客户想看的两个货币对USDCNY和EURCNY → 走 **1.7 币种对比**。客户明确指定了 term=6m，被组合范式为 **1.1 基准单点报价给 term 求 K**
+处理:用户要求美元和欧元都看，默认本币计价下，客户想看的两个货币对USDCNY和EURCNY → 走 **1.12 币种对比**。客户明确指定了 term=6m，被组合范式为 **1.1 基准单点报价给 term 求 K**
 
 调用计划:
 ```
@@ -67,7 +76,7 @@
 处理:
 - "结汇结构性掉期" → 结汇情境
 - "我觉得人民币不会贬值到 7.20" → 客户给出了否定式市场观点，推测隐含 strike = 7.2
-- 客户没有指定 term，且市场观点隐含了一个 K，走报价范式 **1.2 基准单点报价给 K 求 term** 并输出
+- 客户没有指定 term，且市场观点隐含了一个 K，走报价范式 \*\*1\.3 K 确定求 prem\*\* 并输出
 
 #### 示例B3: 区间肯定式观点
 用户:
@@ -91,7 +100,7 @@
 <<<CONTENT_END>>>
 ```
 
-- 若用户后续选"以 K=7.10 求期限"，则走报价范式 **1.2 基准单点报价给 K 求 term** 并输出
+- 若用户后续选"以 K=7.10 求期限"，则走报价范式 \*\*1\.3 K 确定求 prem\*\* 并输出
 
 #### 示例B4: 区间肯定式观点+混合表达，term 作为明确的变量
 用户:
@@ -134,7 +143,7 @@
 > 结构性掉期,结汇,希望近端补贴 100 点左右
 
 处理:
-- 识别 `target_prem_pips = 100`，走报价范式 **1.5 按近端补贴点数反查**
+- 识别 `target_prem_pips = 100`，走报价范式 **1.10 按近端补贴点数反查**
 - 在 1M~12M 范围内扫描 6 个代表性 term(1M、2M、3M、6M、9M、12M)
 - 筛选出补贴最接近 100 的两个 term 点位
 - 只输出这两个方案
@@ -163,7 +172,7 @@
 > 结构性掉期,结汇,希望近端补贴 500 点
 
 处理:
-- 识别 `target_prem_pips = 500`，走报价范式 **1.5 按近端补贴点数反查**
+- 识别 `target_prem_pips = 500`，走报价范式 **1.10 按近端补贴点数反查**
 - 扫描后发现最大补贴仅有 180 点(示意)
 - 仍返回最接近的那个 term 方案
 - 在输出中说明"目标补贴 500 点在当前市场曲线上不可达,以下是最接近的方案"
@@ -173,29 +182,19 @@
 > 半年以内的结构性掉期,希望补贴 80 点
 
 处理:
-- 识别 `target_prem_pips = 80` 且期限限定"半年以内"，走报价范式 **1.5 按近端补贴点数反查**
+- 识别 `target_prem_pips = 80` 且期限限定"半年以内"，走报价范式 **1.10 按近端补贴点数反查**
 - 在 1M~6M 区间内扫描(而不是 1M~12M)
 - 期限集合收窄为 1M、2M、3M、4M、5M、6M(≤6 次预算)
 - 筛选补贴最接近 80 的两个
 
-### 1.5 过约束拦截
+### 1.5 K+term 共存输入
+> 架构变更：K 与 term 不再互斥，同时给出为合法输入。
 
-#### 示例 E1:同时给 K 和 term
+#### 示例 E1:同时给 K 和 term（现为合法输入）
 用户:
 > 3M 结汇结构性掉期,K 要 7.05
 
-处理:K 与 term 冲突,**必须拦截**,通过 chat 让用户二选一。
-
-输出:
-```
-<<<TYPE_START>>> chat <<<TYPE_END>>>
-<<<CONTENT_START>>>
-结构性掉期要求执行价与期限对应唯一,无法同时满足您给出的 K=7.05 与 3M。
-请问您希望以哪一侧作为约束?
-- 以 K=7.05 求对应期限
-- 以 3M 求对应 K
-<<<CONTENT_END>>>
-```
+处理:K 和 term 可同时作为入参，走报价范式 **1.3 K 确定求 prem**（term=3M, K=7.05, 计算该 K 下的期权费补贴）。
 
 ### 1.6 区间扫描组合
 
@@ -203,7 +202,7 @@
 用户:
 > 3M 到 1Y 之间的结汇结构性掉期都看一下
 
-处理:走报价范式 **1.3 沿曲线扫描 term 区间**：组合调用,扫 3M、6M、9M、12M 四个 term 点位。
+处理:走报价范式 \*\*1\.9 沿曲线扫描 term 区间\*\*：组合调用,扫 3M、6M、9M、12M 四个 term 点位。
 
 调用计划:
 - 调用 1:`--term 3M`
@@ -214,17 +213,9 @@
 
 #### 示例 F2:扫描 K 区间
 用户:
-> 结汇结构性掉期,K 从 7.00 到 7.20 扫一下
+> 3M 结汇结构性掉期,K 从 7.00 到 7.20 扫一下
 
-处理:走报价范式 **1.4 沿曲线扫描 K 区间**：组合调用,扫 7.00、7.05、7.10、7.15、7.20 五个 K 点位。
-
-调用计划:
-- 调用 1:`--desired-strike 7.00`
-- 调用 2:`--desired-strike 7.05`
-- 调用 3:`--desired-strike 7.10`
-- 调用 4:`--desired-strike 7.15`
-- 调用 5:`--desired-strike 7.20`
-- 汇总:五行一表,列头含 K 与对应 term
+处理: term=3M 明确，K区间=[7.00, 7.20]。走报价范式 **1.6 K 区间扫描**：单次调用脚本，传入 `--term 3M --desired-strike 7.00 7.20`，脚本返回 5 档梯度，直接透传。
 
 ### 1.7 方向对比(组合)
 
@@ -232,7 +223,7 @@
 用户:
 > 3M 结构性掉期,结汇和购汇都报一下
 
-处理:走报价范式 **1.6 方向对比**：两次调用,方向分别为 settle 和 purchase。两行一表。
+处理:走报价范式 **1.11 方向对比**：两次调用,方向分别为 settle 和 purchase。两行一表。
 
 ### 1.8 多轮上下文
 
@@ -284,7 +275,7 @@
 处理:
 - "近端做到 6.90"相对远期 7.00 相当于希望有约 1000 pips 的近端补贴
 - 这是一个隐含的 `target_prem_pips` 目标
-- 若量级明显在合理市场范围内,走报价范式 **1.5 按近端补贴点数反查**
+- 若量级明显在合理市场范围内,走报价范式 **1.10 按近端补贴点数反查**
 - 若量级明显偏离市场(如本例 1000 点远超实际可行),应通过 chat 澄清是否输入有误
 
 输出:
@@ -336,7 +327,7 @@
 处理：
 - term=3M 明确给出，方向=结汇(settle)，target_prem_pips=500
 - 结构性掉期中 K=FAR，term=3M 时 K 已由曲线唯一确定
-- 走报价范式 **1.5 按近端补贴点数反查**的变体——**锁定 term 反查**
+- 走报价范式 **1.10 按近端补贴点数反查**的变体——**锁定 term 反查**
   - 扫描范围锁定为 [3M]（只有单点）
   - 调用一次：`--term 3M --settle-purchase settle --currency-pair USDCNY`
   - 取回该 term 下的实际补贴点数
@@ -365,7 +356,7 @@
 处理：
 - term 未给，方向=结汇(settle)，币种=USDCNY，target_prem_pips=500
 - 结构性掉期中 K=FAR（硬性约束），因此 K 不能自由选择，必须落在某期限的 FAR 上
-- 走报价范式 **1.5 按近端补贴点数反查**的变体——**K=FAR 约束扫描**
+- 走报价范式 **1.10 按近端补贴点数反查**的变体——**K=FAR 约束扫描**
   - 在 1M~12M 范围内扫描 6 个代表性 term
   - 每个 term 下 K=FAR（由曲线确定），取回对应的补贴点数
   - 找出补贴点数最接近 500 的 2 个方案输出
@@ -381,6 +372,134 @@
 调用 5:--term 9M → 取补贴值
 调用 6:--term 12M → 取补贴值
 汇总:筛选出补贴最接近 500 的 2 个 term
+```
+
+### 1.16 K 确定求 prem（范式 1.3）
+
+此范式适用于用户同时给出 term 和 K，要求计算该 K 下的期权费补贴。
+
+#### 示例 N1：同时给 term 和 K
+用户：
+> 3M 结汇结构性掉期，K 定在 7.05
+
+处理：
+- term=3M 明确，direction=settle，desired_strike=7.05
+- 走报价范式 **1.3 K 确定求 prem**：传入 term=3M, K=7.05 调用脚本
+- 脚本返回该 K 下的 prem/pips 及掉期细节，直接透传
+
+调用：
+```bash
+python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {userId} --currency-pair USDCNY --settle-purchase settle --term 3M --desired-strike 7.05
+```
+
+#### 示例 N2：给交割日和 K
+用户：
+> 2026-09-01 交割的结构性掉期结汇，K 做到 7.10
+
+处理：
+- delivery_date=2026-09-01 提供了远端交割日，direction=settle，desired_strike=7.10
+- 走报价范式 **1.3 K 确定求 prem** 的变体：delivery_date 替代 term 作为期限锚
+- 传入 delivery_date 和 K 调用脚本
+
+调用：
+```bash
+python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {userId} --currency-pair USDCNY --settle-purchase settle --delivery-date 2026-09-01 --desired-strike 7.10
+```
+
+### 1.17 Prem 反求 K（范式 1.4）
+
+此范式适用于用户给出 term 和目标补贴点数，反解达到该补贴所需的 K。
+
+#### 示例 O1：给 term + 补贴点数
+用户：
+> 3M 结汇结构性掉期，希望近端补贴 200 点
+
+处理：
+- term=3M 明确，direction=settle，target_prem_pips=200
+- 走报价范式 **1.4 Prem 反求 K**：传入 term=3M, prem=200 调用脚本
+- 脚本返回达到 200 点补贴所需的 K 及掉期细节，直接透传
+
+调用：
+```bash
+python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {userId} --currency-pair USDCNY --settle-purchase settle --term 3M --prem-pips 200
+```
+
+#### 示例 O2：补贴点数不可达
+用户：
+> 3M 结汇结构性掉期，希望近端补贴 1000 点
+
+处理：
+- term=3M 明确，target_prem_pips=1000
+- 走报价范式 **1.4 Prem 反求 K** 调用脚本
+- 若脚本返回结果中实际补贴明显低于 1000（如仅 180 点），输出时标注"目标 1000 点在 3M 不可达，以下为 3M 的实际方案"
+
+### 1.18 双目标探索（范式 1.5）
+
+此范式适用于用户同时给出 term、K 和 prem 三个目标，脚本在 term 切片内搜索折中解。
+
+#### 示例 P1：term + K + prem 三约束
+用户：
+> 3M 结汇结构性掉期，K 大概 7.05，补贴想做到 300 点左右
+
+处理：
+- term=3M 明确，direction=settle，desired_strike=7.05，target_prem_pips≈300
+- 走报价范式 **1.5 双目标探索**：同时传入 term=3M, K=7.05, prem=300
+- 脚本在 term 切片内搜索折中解，返回多组方案，直接透传
+
+调用：
+```bash
+python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {userId} --currency-pair USDCNY --settle-purchase settle --term 3M --desired-strike 7.05 --prem-pips 300
+```
+
+### 1.19 Prem 区间扫描（范式 1.7）
+
+此范式适用于用户给出 term 和补贴点数区间，脚本自动生成多档梯度。
+
+#### 示例 Q1：给 term + 补贴区间
+用户：
+> 3M 结汇结构性掉期，补贴从 100 到 300 点都看看
+
+处理：
+- term=3M 明确，direction=settle，prem_pips 区间=[100, 300]
+- 走报价范式 **1.7 Prem 区间扫描**：传入 `--prem-pips 100 300`
+- 脚本在 100~300 区间内生成 5 档梯度，直接透传
+
+调用：
+```bash
+python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {userId} --currency-pair USDCNY --settle-purchase settle --term 3M --prem-pips 100 300
+```
+
+### 1.20 风格化报价（范式 1.8）
+
+此范式适用于用户给出风险偏好而非具体参数，agent 将风格映射为 delta 反解 K。
+
+#### 示例 R1：保守风格
+用户：
+> 3M 结汇结构性掉期，保守一点
+
+处理：
+- term=3M 明确，direction=settle，风格="保守"
+- 将"保守"映射为 delta=0.10（低行权概率，K 远离当前价）
+- 走报价范式 **1.8 风格化报价**：传入 term=3M, delta=0.10
+- 脚本按 delta 反解 K，直接透传
+
+调用：
+```bash
+python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {userId} --currency-pair USDCNY --settle-purchase settle --term 3M --delta 0.10
+```
+
+#### 示例 R2：激进风格
+用户：
+> 6M 购汇结构性掉期，激进一点，补贴多点
+
+处理：
+- term=6M 明确，direction=purchase，风格="激进"
+- 将"激进"映射为 delta=0.35（较高行权概率，K 较近）
+- 走报价范式 **1.8 风格化报价**：传入 term=6M, delta=0.35
+
+调用：
+```bash
+python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {userId} --currency-pair USDCNY --settle-purchase purchase --term 6M --delta 0.35
 ```
 
 ---

@@ -19,10 +19,12 @@
 
 ## 1. 合法的报价范式
 - `userId` 作为脚本调用的传参，需要从 memory 中读取
+- K 现已支持独立于掉期远端价格(FAR)输入，K 与 term 不再互斥
+- 范式 1.1/1.1.1 为 K=FAR 基准报价；范式 1.3~1.8 为 K 独立输入的新范式
 
-### 1.1 基准单点报价给 term 求 K
+### 1.1 基准单点报价给 term 求 K（K=FAR）
 - 传入：term, settle, currency_pair
-- 处理：term 作为 `--term`, settle 作为 `--settle-purchase` 的接口传参，求对应的 K。
+- 处理：term 作为 `--term`, settle 作为 `--settle-purchase` 的接口传参，求 K=FAR 对应的方案。
 - 输出：单次调用脚本，返回对应 K 及掉期细节。
 
 调用：
@@ -33,7 +35,7 @@ python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {u
 #### 1.1.1 给 delivery 求 K
 delivery 也作为给定了期限的一种情况，只是入参方式不同
 - 传入：delivery, settle, currency_pair
-- 处理：delivery 作为 `--delivery-date`, settle 作为 `--settle-purchase` 的接口传参，求对应的 K。
+- 处理：delivery 作为 `--delivery-date`, settle 作为 `--settle-purchase` 的接口传参，求 K=FAR 对应的方案。
 - 输出：单次调用脚本，返回对应 K 及掉期细节。
 
 调用：
@@ -41,17 +43,83 @@ delivery 也作为给定了期限的一种情况，只是入参方式不同
 python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {userId} --currency-pair {currency_pair} --settle-purchase {settle} --delivery-date {delivery}
 ```
 
-### 1.2 基准单点报价给 K 求 term
-- 传入：K, settle, currency_pair
-- 处理：K 作为 `--desired-strike`, settle 作为 `--settle-purchase`, currency_pair 作为 `--currency-pair` 的接口传参，求对应的 term。
-- 输出：单次调用脚本，返回对应 term 及掉期细节。
+### 1.2 报价范式映射总表
 
-调用:
+| 用户约束 | 求解模式 | 说明 |
+|---|---|---|
+| 仅 term/delivery | 基准报价(K=FAR) | 1.1 / 1.1.1 |
+| term + K(单值) | K 确定求 prem | 1.3 |
+| term + prem(单值) | Prem 反求 K | 1.4 |
+| term + K(单值) + prem(单值) | 双目标探索 | 1.5 |
+| term + [K₁, K₂] | K 区间扫描 | 1.6 |
+| term + [p₁, p₂] | Prem 区间扫描 | 1.7 |
+| term + delta | 风格化报价 | 1.8 |
+| 仅 K(无 term) | 追问 term 或按默认 term 报价 | — |
+| 仅 prem(无 term) | 按 K=FAR 扫描 term 区间的补贴反查 | 1.10 |
+
+### 1.3 K 确定求 prem（term + K → 期权费补贴）
+- 传入：term, K, settle, currency_pair
+- 处理：给定 term 和 K，计算该 K 对应的期权费(pips)，作为近端补贴
+- 输出：单次调用，返回 K、prem、掉期细节
+
+调用：
 ```bash
-python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {userId} --currency-pair {currency_pair} --settle-purchase {settle} --desired-strike {K}
+python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {userId} --currency-pair {currency_pair} --settle-purchase {settle} --term {term} --desired-strike {K}
 ```
 
-### 1.3 沿曲线扫描 term 区间
+### 1.4 Prem 反求 K（term + prem → 行权价）
+- 传入：term, prem, settle, currency_pair
+- 处理：给定 term 和补贴目标，反解达到该补贴所需的 K
+- 输出：单次调用，返回 K、prem、掉期细节
+
+调用：
+```bash
+python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {userId} --currency-pair {currency_pair} --settle-purchase {settle} --term {term} --prem-pips {prem}
+```
+
+### 1.5 双目标探索（term + K + prem 折中解）
+- 传入：term, K(单值), prem(单值), settle, currency_pair
+- 处理：在给定 term 切片内，寻找同时接近用户 K 目标和 prem 目标的折中解，脚本返回多组方案
+- 输出：单次调用透传（脚本自带多梯度）
+
+调用：
+```bash
+python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {userId} --currency-pair {currency_pair} --settle-purchase {settle} --term {term} --desired-strike {K} --prem-pips {prem}
+```
+
+> 注意：双目标探索不是过约束。三个参数必须同时传入，脚本在 term 切片内搜索折中解。agent 只调一次，透传结果。
+
+### 1.6 K 区间扫描（term + [K₁, K₂]）
+- 传入：term, [K₁, K₂], settle, currency_pair
+- 处理：在给定 term 下，在 K₁~K₂ 区间内扫描，脚本返回多档梯度
+- 输出：单次调用透传（脚本自带 5 梯度）
+
+调用：
+```bash
+python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {userId} --currency-pair {currency_pair} --settle-purchase {settle} --term {term} --desired-strike {K1} {K2}
+```
+
+### 1.7 Prem 区间扫描（term + [p₁, p₂]）
+- 传入：term, [p₁, p₂], settle, currency_pair
+- 处理：在给定 term 下，在 p₁~p₂ 补贴区间内扫描，脚本返回多档梯度
+- 输出：单次调用透传（脚本自带 5 梯度）
+
+调用：
+```bash
+python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {userId} --currency-pair {currency_pair} --settle-purchase {settle} --term {term} --prem-pips {p1} {p2}
+```
+
+### 1.8 风格化报价（term + delta → K）
+- 传入：term, delta, settle, currency_pair
+- 处理：将风格偏好映射为 delta 值，调用 delta 反解获取 K
+- 输出：单次调用
+
+调用：
+```bash
+python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {userId} --currency-pair {currency_pair} --settle-purchase {settle} --term {term} --delta {delta}
+```
+
+### 1.9 沿曲线扫描 term 区间
 此为组合方式，给出 terms 区间扫出对应 term,得到一组 (term, K) 值
 - 传入：terms 区间, settle, currency_pair
 - 处理：
@@ -60,16 +128,7 @@ python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {u
     - 汇总为表格，每行标注对应的子调用维度(K / term / 方向 / 币种 / 补贴点数)
     - 调用次数需控制在 6 次以内
 
-### 1.4 沿曲线扫描 K 区间
-此为组合方式，给出 K 区间扫出对应 term,得到一组 (term, K) 值
-- 传入：K 的区间, settle, currency_pair
-- 处理：
-    - 在区间内选择若干代表性 K 点位(建议 3~5 个)
-    - foreach K 按照 `1.2 基准单点报价给 K 求 term` 传参调一次脚本
-    - 汇总为表格，每行标注对应的子调用维度(K / term / 方向 / 币种 / 补贴点数)
-    - 调用次数需控制在 6 次以内
-
-### 1.5 按近端补贴点数反查
+### 1.10 按近端补贴点数反查（K=FAR 约束）
 此为组合方式，给出用户期望的近端补贴点数, agent 扫描 term,筛选出补贴最接近目标的两个 term 点位返回。
 - 传入：target_prem_pips, settle, currency_pair
 - 处理：
@@ -77,28 +136,28 @@ python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {u
     2. **筛选阶段**:对扫描得到的 (term, 补贴) 数据点,找出补贴数值**最接近用户目标的两个 term 点位**(一个略高、一个略低,方便用户对比)
     3. **输出阶段**:只把筛选出的两个方案返回给用户,表格列明 term、K、补贴点数,并标注"这是最接近您目标 {target_prem_pips} 点的两个方案"
 
-1.5 的扫描阶段，agent 可根据用户语言微调扫描范围——如果用户说"半年以内"，则聚焦在 1M~6M。
+1.10 的扫描阶段，agent 可根据用户语言微调扫描范围——如果用户说"半年以内"，则聚焦在 1M~6M。
 
-#### 1.5.1 corner case
+#### 1.10.1 corner case
 若扫描后发现目标补贴点数**明显高于或低于**曲线所有点的取值:
 - 仍然返回补贴最接近目标的那个 term 点位
 - 在**输出阶段**中明确说明:"您目标的补贴点数在当前市场曲线上不可达,以下是最接近的方案"
 
-### 1.6 方向对比
-此为 1.1-1.5 的组合方式，将 settle 和 purchase 两组方案调用并将结果汇总
+### 1.11 方向对比
+此为 1.1-1.10 的组合方式，将 settle 和 purchase 两组方案调用并将结果汇总
 - 传入：被组合范式除了 settle 以外的传入，{purchase, settle}
 - 处理：
     1. foreach settle in {purchase, settle}，将 settle 作为被组合范式的传参调用
     2. 将两组调用结果汇总，两行一表。
 
-### 1.7 币种对比
-此为 1.1-1.5 的组合方式，将不同的 currency_pair 传参调用并将结果汇总
+### 1.12 币种对比
+此为 1.1-1.10 的组合方式，将不同的 currency_pair 传参调用并将结果汇总
 - 传入：被组合范式除了 currency_pair 以外的传入, currency_pairs
 - 处理：
     1. foreach currency_pair in currency_pairs，将 currency_pair 作为被组合范式的传参调用
     2. 将 N 组调用结果汇总，N 行一表。
 
-### 1.8 兜底报价范式
+### 1.13 兜底报价范式
 由于强制要求**动机识别**必须落在枚举的合法报价范式中，因此规定一个**兜底报价范式**，当 agent 在动机识别中无法将客户动机映射到任何一种合法报价范式时，将它映射到兜底报价范式。
 - 传入：无
 - 处理：
