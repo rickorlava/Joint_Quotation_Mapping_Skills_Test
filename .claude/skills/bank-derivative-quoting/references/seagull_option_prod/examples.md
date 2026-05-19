@@ -147,7 +147,10 @@ python bank-derivative-quoting/scripts/seagull_option_query.py --user-id {userId
 用户:
 > 3M 结汇,激进一点
 
-处理:`delta_preference = aggressive`、`direction = settle` → 查表得 `delta = -0.2`。
+处理:
+- `delta_preference = aggressive`、`direction = settle` → 查自有 Delta 表得 `delta = -0.2`
+- 边界校验：|-0.20| = 20d ≥ 15d（±35 边界）→ 校验通过
+  - 若查表值超边界 → clamp 至边界值 + `chat` 提示"已触达保守/激进边界"
 
 调用:
 ```bash
@@ -159,8 +162,8 @@ python bank-derivative-quoting/scripts/seagull_option_query.py --user-id {userId
 > 3M 结汇,激进和保守都看看
 
 处理:组合调用。
-- 调用 1:`--delta -0.2`(激进)
-- 调用 2:`--delta +0.15`(保守)
+- 激进：查自有 Delta 表得 `delta = -0.2` → 边界校验 |-0.20| ≥ 0.15 → 通过
+- 保守：查自有 Delta 表得 `delta = +0.15` → 边界校验 |+0.15| ≥ 0.15 → 通过
 - 输出:两行一表
 
 ### F. 自由期限
