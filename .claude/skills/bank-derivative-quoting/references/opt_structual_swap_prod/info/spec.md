@@ -13,14 +13,8 @@
 - 代价是承担期权被行权的风险
 
 产品设计要求：
-> **卖出期权的执行价 K = 掉期远端价格**，此为硬性要求，模型**不可以**更改。
-> 期权费默认补贴近端。
-
-该设计要求使得期权的执行价 K 和到期剩余时间 term 绑定：
-- 输入 K -> term 唯一确定
-- 输入 term -> K 唯一确定
-- **同时给 K 和 term → 过约束**(除非 K 和 term 巧合地刚好落在曲线上,否则此定义非法)
-
+> 卖出期权交割日 = 掉期远端交割日
+> 期权费默认补贴掉期近端。
 
 ## 1.2 方向与期权结构的映射关系
 
@@ -35,7 +29,6 @@
 ### 2.1 正算报价
 
 - 输入货币对、方向、近远端交割日、中收
-
 - 2.1.1 获取 原始掉期:（nearBasePrice + swapBasePoint = farBasePrice）
 - 2.1.2 获取 期权: 默认strike -> premPips（期权费）
 
@@ -76,13 +69,15 @@ bank-derivative-quoting/scripts/opt_structured_swap_query.py
 
 | 参数 | 含义 | 互斥关系 |
 |---|---|---|
-| `--user-id` | 用户ID,从 memory 获取 | — |
-| `--currency-pair` | 货币对 | — |
-| `--settle-purchase` | 方向,`settle` / `purchase` | — |
-| `--term` | 期限 | **与 `--desired-strike` 互斥** |
-| `--delivery-date` | 交割日 | **与 `--desired-strike` 互斥** |
-| `--desired-strike` | 目标执行价 K(单值) | **与 `--term` / `--delivery-date` 互斥** |
-| `--profit` | 中收点数 | — |
+| `--user-id` | 用户ID,从 memory 获取 | - |
+| `--currency-pair` | 货币对 | - |
+| `--settle-purchase` | 方向,`settle` / `purchase` | - |
+| `--term` | 远端期限 | 默认远端 |
+| `--delivery-date` | 交割日 | 默认远端 |
+| `--desired-strike` | 目标执行价 K(单值) | - |
+| `--profit` | 中收点数 | - |
+|`--near-term`| 近端期限| 近端 |
+|`--near-delivery-date`|近端交割日|-|
 
 ### 3.2 典型调用示例
 
@@ -91,7 +86,7 @@ bank-derivative-quoting/scripts/opt_structured_swap_query.py
 python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {userId} --currency-pair USDCNY --settle-purchase settle --term 3M
 
 # 给 K 求 term
-python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {userId} --currency-pair USDCNY --settle-purchase settle --desired-strike 7.10
+python bank-derivative-quoting/scripts/structured_swap_query.py --user-id {userId} --currency-pair USDCNY --settle-purchase settle --desired-strike 7.10
 
 # 指定交割日求 K
 python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {userId} --settle-purchase settle --delivery-date 2026-09-01
@@ -104,17 +99,11 @@ python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {u
 
 - 单次调用返回字符串已按规范组装,**直接透传**
 - 组合调用由 agent 负责汇总与筛选
-- **同时传入 K 和 term/delivery-date 时脚本会报错**——agent 必须在调用前拦截
-
-### 3.4 禁止的调用形态
-
-- 同时传 `--desired-strike` 和 `--term`
-- 同时传 `--desired-strike` 和 `--delivery-date`
-- 传入 K 或 term 区间作为单次参数——这些需要走组合调用
+- **可以传入 K 和 term/delivery-date
 
 ## 4. 注意事项
 
-1. **K 与 term 互斥**:不能同时作为接口传参,agent 必须在调用前拦截
+1. **K 与 term 可以同时**,调用标准结构性掉期接口
 2. **补贴点数是目标不是输入**:用户给出补贴目标时,走扫描反查组合,不作为参数直接传入
 3. **不存在双目标探索**:解空间是一维曲线,没有二维折中
 4. **区间扫描走组合**:K 区间或 term 区间通过多次单点调用实现

@@ -17,34 +17,7 @@
 - 汇总为表格时，每行标注对应的子调用维度（K / term / 方向 / 币种 / 补贴点数）
 - 组合模式只输出最终结果，不输出扫描过程中的全部中间数据——**中间数据是 agent 的内部工作，不是用户的答案**
 
-## 1. 合法的报价范式
-- `userId` 作为脚本调用的传参，需要从 memory 中读取
-- K 现已支持独立于掉期远端价格(FAR)输入，K 与 term 不再互斥
-- 范式 1.1/1.1.1 为 K=FAR 基准报价；范式 1.3~1.8 为 K 独立输入的新范式
-
-### 1.1 基准单点报价给 term 求 K（K=FAR）
-- 传入：term, settle, currency_pair
-- 处理：term 作为 `--term`, settle 作为 `--settle-purchase` 的接口传参，求 K=FAR 对应的方案。
-- 输出：单次调用脚本，返回对应 K 及掉期细节。
-
-调用：
-```bash
-python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {userId} --currency-pair {currency_pair} --settle-purchase {settle} --term {term}
-```
-
-#### 1.1.1 给 delivery 求 K
-delivery 也作为给定了期限的一种情况，只是入参方式不同
-- 传入：delivery, settle, currency_pair
-- 处理：delivery 作为 `--delivery-date`, settle 作为 `--settle-purchase` 的接口传参，求 K=FAR 对应的方案。
-- 输出：单次调用脚本，返回对应 K 及掉期细节。
-
-调用：
-```bash
-python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {userId} --currency-pair {currency_pair} --settle-purchase {settle} --delivery-date {delivery}
-```
-
-### 1.2 报价范式映射总表
-
+## 0. 报价范式映射总表
 | 用户约束 | 求解模式 | 说明 |
 |---|---|---|
 | 仅 term/delivery | 基准报价(K=FAR) | 1.1 / 1.1.1 |
@@ -57,24 +30,51 @@ python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {u
 | 仅 K(无 term) | 追问 term 或按默认 term 报价 | — |
 | 仅 prem(无 term) | 按 K=FAR 扫描 term 区间的补贴反查 | 1.10 |
 
-### 1.3 K 确定求 prem（term + K → 期权费补贴）
+## 1. 合法的报价范式
+
+- `userId` 作为脚本调用的传参，需要从 memory 中读取
+- K 现已支持独立于掉期远端价格(FAR)输入，K 与 term 不再互斥
+- 范式 1.1/1.2/1.9/1.10 为 K=FAR 基准报价；范式 1.3~1.8 为 K 独立输入的新范式
+
+### 1.1 基准单点报价 给 term 求 K（K=FAR）
+- 传入：term, settle, currency_pair
+- 处理：term 作为 `--term`, settle 作为 `--settle-purchase` 的接口传参，求 K=FAR 对应的方案。
+- 输出：单次调用优化结构性掉期脚本，返回对应 K 及掉期细节。
+
+调用：
+```bash
+python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {userId} --currency-pair {currency_pair} --settle-purchase {settle} --term {term}
+```
+
+#### 1.2 基准单点报价 给 delivery_date 求 K（K=FAR）
+delivery_date 也作为给定了期限的一种情况，只是入参方式不同
+- 传入：delivery_date, settle, currency_pair
+- 处理：delivery_date 作为 `--delivery-date`, settle 作为 `--settle-purchase` 的接口传参，求 K=FAR 对应的方案。
+- 输出：单次调用优化结构性掉期脚本，返回对应 K 及掉期细节。
+
+调用：
+```bash
+python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {userId} --currency-pair {currency_pair} --settle-purchase {settle} --delivery-date {delivery}
+```
+
+### 1.3 K 确定求 期权费perm（term + K → 期权费补贴perm）
 - 传入：term, K, settle, currency_pair
 - 处理：给定 term 和 K，计算该 K 对应的期权费(pips)，作为近端补贴
 - 输出：单次调用，返回 K、prem、掉期细节
 
 调用：
 ```bash
-python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {userId} --currency-pair {currency_pair} --settle-purchase {settle} --term {term} --desired-strike {K}
+python bank-derivative-quoting/scripts/structured_swap_query.py --user-id {userId} --currency-pair {currency_pair} --settle-purchase {settle} --term {term} --desired-strike {K}
 ```
 
-### 1.4 Prem 反求 K（term + prem → 行权价）
-- 传入：term, prem, settle, currency_pair
+### 1.4 期权费Prem 反求 K（term + prem → 行权价）
+- 传入：term 或 delivery_date, prem, settle, currency_pair
 - 处理：给定 term 和补贴目标，反解达到该补贴所需的 K
-- 输出：单次调用，返回 K、prem、掉期细节
+- 输出：单次调用，返回 K、期权费prem、掉期细节
 
 调用：
 ```bash
-python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {userId} --currency-pair {currency_pair} --settle-purchase {settle} --term {term} --prem-pips {prem}
+python bank-derivative-quoting/scripts/structured_swap_query.py --user-id {userId} --currency-pair {currency_pair} --settle-purchase {settle} --term {term} --prem-pips {prem}
 ```
 
 ### 1.5 双目标探索（term + K + prem 折中解）
@@ -84,7 +84,7 @@ python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {u
 
 调用：
 ```bash
-python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {userId} --currency-pair {currency_pair} --settle-purchase {settle} --term {term} --desired-strike {K} --prem-pips {prem}
+python bank-derivative-quoting/scripts/structured_swap_query.py --user-id {userId} --currency-pair {currency_pair} --settle-purchase {settle} --term {term} --desired-strike {K} --prem-pips {prem}
 ```
 
 > 注意：双目标探索不是过约束。三个参数必须同时传入，脚本在 term 切片内搜索折中解。agent 只调一次，透传结果。
@@ -96,7 +96,7 @@ python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {u
 
 调用：
 ```bash
-python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {userId} --currency-pair {currency_pair} --settle-purchase {settle} --term {term} --desired-strike {K1} {K2}
+python bank-derivative-quoting/scripts/structured_swap_query.py --user-id {userId} --currency-pair {currency_pair} --settle-purchase {settle} --term {term} --desired-strike {K1} {K2}
 ```
 
 ### 1.7 Prem 区间扫描（term + [p₁, p₂]）
@@ -106,7 +106,7 @@ python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {u
 
 调用：
 ```bash
-python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {userId} --currency-pair {currency_pair} --settle-purchase {settle} --term {term} --prem-pips {p1} {p2}
+python bank-derivative-quoting/scripts/structured_swap_query.py --user-id {userId} --currency-pair {currency_pair} --settle-purchase {settle} --term {term} --prem-pips {p1} {p2}
 ```
 
 ### 1.8 风格化报价（term + delta → K）
@@ -116,7 +116,7 @@ python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {u
 
 调用：
 ```bash
-python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {userId} --currency-pair {currency_pair} --settle-purchase {settle} --term {term} --delta {delta}
+python bank-derivative-quoting/scripts/structured_swap_query.py --user-id {userId} --currency-pair {currency_pair} --settle-purchase {settle} --term {term} --delta {delta}
 ```
 
 ### 1.9 沿曲线扫描 term 区间
@@ -157,7 +157,10 @@ python bank-derivative-quoting/scripts/opt_structured_swap_query.py --user-id {u
     1. foreach currency_pair in currency_pairs，将 currency_pair 作为被组合范式的传参调用
     2. 将 N 组调用结果汇总，N 行一表。
 
-### 1.13 兜底报价范式
+### 1.13 指定近端汇率
+此为结构性掉期近端最终报价形态，根据同期限、同货币、同方向的基础掉期近端报价，推理出需要补贴多少点期权费，转化为1.4期权费反解掉期报价。
+
+### 1.14 兜底报价范式
 由于强制要求**动机识别**必须落在枚举的合法报价范式中，因此规定一个**兜底报价范式**，当 agent 在动机识别中无法将客户动机映射到任何一种合法报价范式时，将它映射到兜底报价范式。
 - 传入：无
 - 处理：

@@ -1,4 +1,4 @@
-# 标准结构性掉期脚本调用映射（opt_structured_swap）
+# 优化结构性掉期脚本调用映射（opt_structured_swap）
 
 > **本文件内容将注册到上下文中，供 skill 执行时引用。**
 
