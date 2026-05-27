@@ -1,0 +1,27 @@
+# 模型配置
+# 使用方式: python runner.py --model ds-v4 或 --model qwen
+
+models:
+  ds-v4:
+    type: anthropic       # Anthropic Messages API 兼容格式
+    api_key: sk-8cc5806c949e4158ada6e7182af2ec06
+    base_url: https://api.deepseek.com/anthropic
+    model: deepseek-v4-flash
+    max_tokens: 8192
+    temperature: 0.1
+
+  qwen:
+    type: anthropic       # Anthropic Messages API 兼容格式
+    api_key: sk-da38be6d899c4de9bfb982352161da61
+    base_url: https://dashscope.aliyuncs.com/apps/anthropic/v1
+    model: qwen3.6-27b
+    max_tokens: 8192
+    temperature: 0.1
+
+# 默认模型
+default_model: ds-v4
+
+# 回归测试
+test:
+  cases: ./test/cases.yaml
+  output_dir: ./test/results/
